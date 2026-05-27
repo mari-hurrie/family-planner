@@ -966,7 +966,7 @@ async function runWeeklyPlan() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 2000,
         system: `You are a warm, organised family planning assistant. You help families plan their week efficiently. Always respond ONLY with valid JSON, no preamble, no markdown fences.`,
         messages: [{ role: 'user', content: prompt }]
@@ -1355,7 +1355,7 @@ If no conflict, leave conflictNote empty and suggestion as "Looks good — no co
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         system: 'You are a family calendar assistant. Reply only with valid JSON.',
         messages: [{ role: 'user', content: prompt }]
@@ -1428,7 +1428,7 @@ Keep answers concise, friendly, and practical. Max 3 sentences unless asked for 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-5',
         max_tokens: 1000,
         system,
         messages: [{ role: 'user', content: msg }]
