@@ -967,7 +967,7 @@ async function runWeeklyPlan() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 2000,
+        max_tokens: 4000,
         system: `You are a warm, organised family planning assistant. You help families plan their week efficiently. Always respond ONLY with valid JSON, no preamble, no markdown fences.`,
         messages: [{ role: 'user', content: prompt }]
       })
@@ -1035,8 +1035,7 @@ Return ONLY a JSON object in exactly this structure:
   ],
   "weekSummary": "One warm sentence summarising the week."
 }
-For stockAlerts: cross-reference each meal's ingredients against the current pantry inventory. Only flag staple items (pasta, rice, oil, canned goods etc) that will drop below a safe threshold after being used. Include the day the item gets used and estimated remaining quantity.
-Only include shopping categories that have items. Flag events that need action (birthdays, school events, parties). Include 7 days Mon-Sun for meals. Keep meal names short and appealing.`;
+Only include shopping categories that have items. Flag events needing action (birthdays, parties, school events). Include 7 days Mon-Sun for meals. Keep meal names short (max 4 words). Keep ingredients list to max 3 key staple items per meal only. Shopping list covers meals plus weekly staples, excluding pantry items already stocked.`;
 }
 
 // ---- RENDER ----
