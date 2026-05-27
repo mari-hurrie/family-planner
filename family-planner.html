@@ -974,6 +974,14 @@ async function runWeeklyPlan() {
     });
 
     const data = await response.json();
+    if (!data.content) {
+      console.error('Unexpected API response:', data);
+      showToast('API error — check console for details');
+      btn.disabled = false;
+      btn.textContent = '✦ Refresh plan';
+      document.getElementById('loadingBar').classList.remove('active');
+      return;
+    }
     const text = data.content.map(b => b.text || '').join('');
     const clean = text.replace(/```json|```/g,'').trim();
     weekPlan = JSON.parse(clean);
@@ -992,7 +1000,7 @@ function buildPlanningPrompt(calEvents) {
   const s = settings;
   const today = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
   const inventoryStr = inventory.length
-    ? inventory.map(i => `${i.name}: ${i.qty}${i.unit}`).join(', ')
+    ? inventory.map(i => `${i.name}: ${i.current}${i.unit} (target: ${i.target}${i.unit})`).join(', ')
     : 'not set up yet';
   return `Today is ${today}. Plan the week for this family:
 - Adults: ${s.name1||'Person 1'} and ${s.name2||'Person 2'}
