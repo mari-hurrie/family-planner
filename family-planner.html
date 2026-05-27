@@ -962,7 +962,7 @@ async function runWeeklyPlan() {
   const prompt = buildPlanningPrompt(calEvents);
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://jolly-smoke-a787.mari-hurrie.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1343,7 +1343,7 @@ Is there a conflict? Reply ONLY with JSON: {"conflict": true/false, "conflictNot
 If no conflict, leave conflictNote empty and suggestion as "Looks good — no conflicts found."`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://jolly-smoke-a787.mari-hurrie.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1416,7 +1416,7 @@ Keep answers concise, friendly, and practical. Max 3 sentences unless asked for 
       { role: 'user', content: msg }
     ].filter(m => m.role !== 'assistant' || chatHistory.indexOf(m) !== 0);
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://jolly-smoke-a787.mari-hurrie.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
