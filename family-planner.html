@@ -1144,6 +1144,55 @@ function expandRecurring(ev, mon, sun) {
   return results;
 }
 
+async function fetchIcalEvents(urls) {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(now); mon.setDate(diff); mon.setHours(0,0,0,0);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 7); sun.setHours(6,0,0,0);
+
+  const allEvents = [];
+  const urlList = urls && urls.length ? urls : ICAL_URLS;
+
+  for (const url of urlList) {
+    try {
+      const proxyUrl = `https://jolly-smoke-a787.mari-hurrie.workers.dev/ical?url=${encodeURIComponent(url)}`;
+      const res = await fetch(proxyUrl);
+      const text = await res.text();
+      const parsed = parseIcal(text);
+      parsed.forEach(ev => {
+        if (ev.rrule) {
+          const expanded = expandRecurring(ev, mon, sun);
+          allEvents.push(...expanded);
+        } else {
+          const start = icalDateToDate(ev.start);
+          const end = ev.end ? icalDateToDate(ev.end) : null;
+          if (start && start >= mon && start <= sun) {
+            allEvents.push({ ...ev, startDate: start, endDate: end });
+          }
+        }
+      });
+    } catch(e) { console.warn('iCal fetch error:', e); }
+  }
+
+  if (!allEvents.length) return null;
+
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const grouped = {};
+  allEvents.sort((a,b) => a.startDate - b.startDate).forEach(ev => {
+    const key = dayNames[ev.startDate.getDay()];
+    if (!grouped[key]) grouped[key] = [];
+    if (ev.allDay) {
+      grouped[key].push(`${ev.title} (all day)`);
+    } else {
+      const startTime = ev.startDate.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+      const endTime = ev.endDate ? ev.endDate.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '';
+      grouped[key].push(`${ev.title} ${startTime}${endTime ? '–'+endTime : ''}`);
+    }
+  });
+  return Object.entries(grouped).map(([d, evs]) => `${d}: ${evs.join(', ')}`).join(' | ');
+}
+
 // ---- GOOGLE CALENDAR API READ ----
 const FAMILY_CAL_ID = 'family04031633843425022505@group.calendar.google.com';
 let calendarEvents = []; // Full event objects with IDs for editing
@@ -1217,56 +1266,6 @@ async function updateCalendarEvent(eventId, updates) {
     if (res.ok) { showToast('Event updated in Google Calendar ✓'); return true; }
     showToast('Could not update event'); return false;
   } catch(e) { showToast('Error updating event'); return false; }
-}
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const mon = new Date(now); mon.setDate(diff); mon.setHours(0,0,0,0);
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 7); sun.setHours(6,0,0,0);
-
-  const allEvents = [];
-  const urlList = urls && urls.length ? urls : ICAL_URLS;
-
-  for (const url of urlList) {
-    try {
-      const proxyUrl = `https://jolly-smoke-a787.mari-hurrie.workers.dev/ical?url=${encodeURIComponent(url)}`;
-      const res = await fetch(proxyUrl);
-      const text = await res.text();
-      const parsed = parseIcal(text);
-
-      parsed.forEach(ev => {
-        if (ev.rrule) {
-          // Expand recurring events
-          const expanded = expandRecurring(ev, mon, sun);
-          allEvents.push(...expanded);
-        } else {
-          const start = icalDateToDate(ev.start);
-          const end = ev.end ? icalDateToDate(ev.end) : null;
-          if (start && start >= mon && start <= sun) {
-            allEvents.push({ ...ev, startDate: start, endDate: end });
-          }
-        }
-      });
-    } catch(e) { console.warn('iCal fetch error:', e); }
-  }
-
-  if (!allEvents.length) return null;
-
-  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const grouped = {};
-  allEvents.sort((a,b) => a.startDate - b.startDate).forEach(ev => {
-    const key = dayNames[ev.startDate.getDay()];
-    if (!grouped[key]) grouped[key] = [];
-    if (ev.allDay) {
-      grouped[key].push(`${ev.title} (all day)`);
-    } else {
-      const startTime = ev.startDate.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
-      const endTime = ev.endDate ? ev.endDate.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'}) : '';
-      grouped[key].push(`${ev.title} ${startTime}${endTime ? '–'+endTime : ''}`);
-    }
-  });
-
-  return Object.entries(grouped).map(([d, evs]) => `${d}: ${evs.join(', ')}`).join(' | ');
 }
 
 // ---- TABS ----
@@ -1433,7 +1432,7 @@ function renderCalendar() {
         );
         const evId = gcalEv ? gcalEv.id : null;
         return `
-        <div class="cal-event ${e.flagged ? 'flagged' : ''}" style="cursor:pointer" onclick="${evId ? `editCalendarEvent('${evId}')` : ''}">
+        <div class="cal-event ${e.flagged ? 'flagged' : ''}" style="cursor:pointer" onclick="${evId ? 'editCalendarEvent(\'' + evId + '\')' : ''}">
           <span>${e.title}</span>
           <div style="display:flex;align-items:center;gap:6px">
             ${e.who ? `<span class="who">${e.who}</span>` : ''}
@@ -2113,7 +2112,7 @@ function renderRecurringEvents() {
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
         <button onclick="editRecurringEvent(${i})" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sand);background:none;cursor:pointer;color:var(--bark);font-family:inherit">Edit</button>
-        <button onclick="${isGcalConnected() ? `addEventToGoogleCalendar(recurringEvents[${i}])` : `downloadRecurringIcs(${i})`}" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sage);background:none;cursor:pointer;color:var(--bark);font-family:inherit">📅 ${isGcalConnected() ? 'Add to Cal' : 'Export .ics'}</button>
+        <button onclick="isGcalConnected() ? addEventToGoogleCalendar(recurringEvents[${i}]) : downloadRecurringIcs(${i})" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sage);background:none;cursor:pointer;color:var(--bark);font-family:inherit">📅 Add to Cal</button>
         <button onclick="deleteRecurringEvent(${i})" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sand);background:none;cursor:pointer;color:var(--stone);font-family:inherit">✕</button>
       </div>
     </div>`;
