@@ -523,11 +523,12 @@
 
 <div class="container">
 
+
   <!-- HERO -->
   <div class="hero-card">
     <div class="hero-text">
-      <h2>Good morning ✦</h2>
-      <p>Connect your Google Calendar, set your family preferences, then run your weekly plan — meals, shopping, actions and all.</p>
+      <h2 id="heroGreeting">Good morning ✦</h2>
+      <p id="heroMessage">Connect your Google Calendar, set your family preferences, then run your weekly plan.</p>
     </div>
     <button class="run-btn" id="runBtn" onclick="runWeeklyPlan()">✦ Plan our week</button>
   </div>
@@ -736,6 +737,41 @@ function getWeekLabel() {
 }
 getWeekLabel();
 
+// ---- DYNAMIC GREETING & FUNNY MESSAGES ----
+function setHeroGreeting() {
+  const hour = new Date().getHours();
+  let greeting;
+  if (hour >= 5 && hour < 12) greeting = 'Good morning ✦';
+  else if (hour >= 12 && hour < 17) greeting = 'Good afternoon ✦';
+  else if (hour >= 17 && hour < 21) greeting = 'Good evening ✦';
+  else greeting = 'Still up? ✦';
+
+  const messages = [
+    "Chin up, tits out, you've got this.",
+    "Coffee first. Plans second. World domination third.",
+    "You're one organised family away from total chaos. Let's fix that.",
+    "The fridge won't fill itself. Sadly.",
+    "Ben and Sam aren't going to feed themselves. Probably.",
+    "Another week, another chance to pretend you have it all together.",
+    "Meals planned. Sanity preserved. You're welcome.",
+    "What's for dinner? Great question. Let's find out.",
+    "Organised chaos is still chaos. But it tastes better.",
+    "Sunday planning: cheaper than therapy.",
+    "A family that plans together, survives the week together.",
+    "The week won't organise itself. Unfortunately.",
+    "You've got two kids, a calendar and a dream. Let's go.",
+    "Plot twist: this week will actually go smoothly.",
+    "Warning: running this plan may result in a functional week.",
+    "Less chaos, more pasta. That's the dream.",
+  ];
+
+  const el = document.getElementById('heroGreeting');
+  const msg = document.getElementById('heroMessage');
+  if (el) el.textContent = greeting;
+  if (msg) msg.textContent = messages[Math.floor(Math.random() * messages.length)];
+}
+setHeroGreeting();
+
 // ---- ICAL CALENDAR ----
 const ICAL_URLS = [
   'https://calendar.google.com/calendar/ical/family04031633843425022505%40group.calendar.google.com/private-21deff3c2bdba38e267a30a480a17af5/basic.ics'
@@ -839,9 +875,11 @@ function parseIcal(icalText) {
       }
       else if (line.startsWith('DESCRIPTION:')) current.description = line.slice(12);
       else if (line.startsWith('LOCATION:')) current.location = line.slice(9);
+      else if (line.startsWith('STATUS:')) current.status = line.slice(7).trim();
+      else if (line.match(/^DTSTART.*TZID/)) { const tzMatch = line.match(/TZID=([^:;]+)/); if (tzMatch) current.tzid = tzMatch[1]; }
     }
   }
-  return events;
+  return events.filter(e => e.status !== 'CANCELLED');
 }
 
 function icalDateToDate(str) {
@@ -864,7 +902,7 @@ async function fetchIcalEvents(urls) {
   const day = now.getDay();
   const diff = now.getDate() - day + (day === 0 ? -6 : 1);
   const mon = new Date(now); mon.setDate(diff); mon.setHours(0,0,0,0);
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 7); sun.setHours(6,0,0,0);
 
   const allEvents = [];
   const urlList = urls && urls.length ? urls : ICAL_URLS;
@@ -1017,7 +1055,7 @@ Return ONLY a JSON object in exactly this structure:
     { "day": "Mon", "events": [{"title": "...", "who": "...", "flagged": false}] }
   ],
   "actionItems": [
-    { "text": "...", "tag": "buy|plan|book" }
+    { "text": "...", "tag": "buy|plan|book", "who": "Mari|Brandon|Both|Kids" }
   ],
   "meals": [
     { "day": "Mon", "meal": "...", "note": "...", "ingredients": [{"name": "Pasta", "qty": 500, "unit": "g"}] }
@@ -1076,16 +1114,29 @@ function renderActions() {
     return;
   }
   el.innerHTML = weekPlan.actionItems.map((a,i) => `
-    <div class="action-item">
-      <div class="action-check" id="check-${i}" onclick="toggleCheck(${i})"></div>
-      <div class="action-text">${a.text}<span class="action-tag tag-${a.tag}">${a.tag}</span></div>
+    <div class="action-item" id="action-item-${i}">
+      <div class="action-check ${a.done ? 'done' : ''}" id="check-${i}" onclick="toggleCheck(${i})"></div>
+      <div class="action-text" style="${a.done ? 'text-decoration:line-through;color:var(--stone)' : ''}">
+        ${a.text}
+        <span class="action-tag tag-${a.tag}">${a.tag}</span>
+        ${a.who ? `<span class="action-tag" style="background:#EDE8DF;color:var(--bark)">${a.who}</span>` : ''}
+      </div>
     </div>
   `).join('');
 }
 
 function toggleCheck(i) {
-  const el = document.getElementById('check-'+i);
-  el.classList.toggle('done');
+  const check = document.getElementById('check-'+i);
+  const item = document.getElementById('action-item-'+i);
+  check.classList.toggle('done');
+  const textEl = item.querySelector('.action-text');
+  const isDone = check.classList.contains('done');
+  textEl.style.textDecoration = isDone ? 'line-through' : '';
+  textEl.style.color = isDone ? 'var(--stone)' : '';
+  // Persist done state
+  if (weekPlan && weekPlan.actionItems[i]) {
+    weekPlan.actionItems[i].done = isDone;
+  }
 }
 
 function renderMeals() {
@@ -1380,16 +1431,69 @@ If no conflict, leave conflictNote empty and suggestion as "Looks good — no co
 function renderBookings() {
   const el = document.getElementById('bookingsContent');
   if (!bookings.length) { el.innerHTML = '<p class="empty-state">No bookings added yet.</p>'; return; }
-  el.innerHTML = bookings.map(b => `
+  el.innerHTML = bookings.map((b,i) => `
     <div class="booked-item">
-      <div>
-        <strong>${b.title}</strong> · ${b.who}<br>
+      <div style="flex:1">
+        <strong>${b.title}</strong> · ${b.who || ''}<br>
         <span style="font-size:12px;color:var(--bark)">${b.date}${b.time ? ' at '+b.time : ''}</span>
+        ${b.notes ? `<br><span style="font-size:12px;color:var(--bark)">${b.notes}</span>` : ''}
         ${b.note ? `<br><span style="font-size:12px;color:var(--bark);font-style:italic">${b.note}</span>` : ''}
       </div>
-      <span class="status-badge ${b.conflict ? 'pending' : ''}">${b.conflict ? '⚠️ conflict' : '✓ clear'}</span>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <span class="status-badge ${b.conflict ? 'pending' : ''}">${b.conflict ? '⚠️ conflict' : '✓ clear'}</span>
+        <button onclick="downloadIcs(${i})" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sage);background:none;cursor:pointer;color:var(--bark);font-family:inherit">📅 Add to Calendar</button>
+      </div>
     </div>
   `).join('');
+}
+
+function downloadIcs(i) {
+  const b = bookings[i];
+  if (!b) return;
+
+  // Build date strings for .ics
+  const dateStr = b.date.replace(/-/g,'');
+  let dtStart, dtEnd;
+  if (b.time) {
+    const timeStr = b.time.replace(':','') + '00';
+    dtStart = `${dateStr}T${timeStr}`;
+    // Default 1 hour duration
+    const [h, m] = b.time.split(':').map(Number);
+    const endH = String(h + 1).padStart(2,'0');
+    dtEnd = `${dateStr}T${endH}${String(m).padStart(2,'0')}00`;
+  } else {
+    dtStart = dateStr;
+    dtEnd = dateStr;
+  }
+
+  const uid = `${Date.now()}@ourweek.app`;
+  const now = new Date().toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+  const isAllDay = !b.time;
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Our Week//Family Planner//EN',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${now}`,
+    isAllDay ? `DTSTART;VALUE=DATE:${dtStart}` : `DTSTART:${dtStart}`,
+    isAllDay ? `DTEND;VALUE=DATE:${dtEnd}` : `DTEND:${dtEnd}`,
+    `SUMMARY:${b.title}`,
+    b.notes ? `DESCRIPTION:${b.notes}` : '',
+    b.who ? `COMMENT:${b.who}` : '',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].filter(Boolean).join('\r\n');
+
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${b.title.replace(/\s+/g,'-')}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📅 Opening in Google Calendar...');
 }
 
 // ---- CHAT ----
