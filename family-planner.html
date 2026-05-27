@@ -1806,14 +1806,34 @@ async function addBooking() {
 
   if (!title || !date) { showToast('Please add a title and date'); return; }
 
-  // Check conflicts with AI
-  const s = settings;
-  const calContext = s.calInput || 'no events known';
-  const prompt = `Family calendar events this week: ${calContext}. 
-Someone wants to add: "${title}" for ${who} on ${date} at ${time||'unspecified time'}.
-Is there a conflict? Reply ONLY with JSON: {"conflict": true/false, "conflictNote": "...", "suggestion": "..."}
-If no conflict, leave conflictNote empty and suggestion as "Looks good — no conflicts found."`;
+  // Build calendar context from live data (Google API events or week plan)
+  let calContext = settings.calInput || '';
+  if (calendarEvents.length) {
+    // Use live Google Calendar events
+    const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const grouped = {};
+    calendarEvents.forEach(ev => {
+      const startStr = ev.start?.dateTime || ev.start?.date;
+      if (!startStr) return;
+      const d = new Date(startStr);
+      const key = dayNames[d.getDay()] + ' ' + startStr.slice(0,10);
+      if (!grouped[key]) grouped[key] = [];
+      const isAllDay = !ev.start?.dateTime;
+      const time2 = isAllDay ? 'all day' : d.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+      grouped[key].push(`${ev.summary} at ${time2}`);
+    });
+    calContext = Object.entries(grouped).map(([d, evs]) => `${d}: ${evs.join(', ')}`).join(' | ');
+  } else if (weekPlan?.calendarDays) {
+    // Fall back to week plan data
+    calContext = weekPlan.calendarDays.map(d =>
+      `${d.day}: ${d.events.map(e => e.title).join(', ')}`
+    ).join(' | ');
+  }
 
+  const prompt = `Family calendar for the week: ${calContext || 'no events known'}.
+New event to add: "${title}" for ${who || 'unspecified'} on ${date} at ${time || 'unspecified time'}.
+Check if there is a time conflict for the same person on the same day and time. Reply ONLY with JSON:
+{"conflict": true/false, "conflictNote": "brief description of what clashes", "suggestion": "brief suggestion or Looks good — no conflicts found."}`;
   try {
     const response = await fetch('https://jolly-smoke-a787.mari-hurrie.workers.dev', {
       method: 'POST',
@@ -1830,16 +1850,28 @@ If no conflict, leave conflictNote empty and suggestion as "Looks good — no co
     const result = JSON.parse(text);
 
     const booking = { title, who, date, time, notes, conflict: result.conflict, note: result.suggestion || result.conflictNote };
+
+    // If conflict detected — warn and ask for confirmation before adding
+    if (result.conflict) {
+      const proceed = confirm(`⚠️ Conflict detected!\n\n${result.conflictNote}\n\n${result.suggestion}\n\nAdd to calendar anyway?`);
+      if (!proceed) {
+        showToast('Booking cancelled');
+        return;
+      }
+    }
+
     bookings.push(booking);
     renderBookings();
-    showToast(result.conflict ? `⚠️ Conflict detected` : 'Added ✓');
+    showToast(result.conflict ? `⚠️ Added despite conflict` : 'Added ✓');
+
     // Auto-add to Google Calendar if connected
     if (isGcalConnected()) {
       const added = await addEventToGoogleCalendar({ title, who, date, time, notes });
       if (added) {
-        // Remove from bookings list since it's now in the calendar
         bookings = bookings.filter(b => !(b.title === title && b.date === date));
         renderBookings();
+        document.getElementById('bookTitle').value = '';
+        document.getElementById('bookNotes').value = '';
         return;
       }
     }
