@@ -871,7 +871,7 @@ async function fetchIcalEvents(urls) {
 
   for (const url of urlList) {
     try {
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const proxyUrl = `https://jolly-smoke-a787.mari-hurrie.workers.dev/ical?url=${encodeURIComponent(url)}`;
       const res = await fetch(proxyUrl);
       const text = await res.text();
       const parsed = parseIcal(text);
