@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Our Week — Family Planner</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --cream: #FAF7F2;
@@ -519,6 +520,7 @@
   <div id="gcal-header-status" style="font-size:12px;color:var(--stone);display:none">
     <span style="color:var(--sage)">●</span> Google Calendar connected
   </div>
+  <button id="gcal-connect-btn" onclick="connectGoogleCalendarWrite()" style="font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid var(--stone);background:none;color:var(--stone);cursor:pointer;font-family:inherit;display:none">Connect Calendar</button>
 </header>
 
 <div class="container">
@@ -637,15 +639,81 @@
     </div>
   </div>
   <div id="tab-bookings" style="display:none">
+
+    <!-- RECURRING & SPECIAL EVENTS -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-title"><div class="dot dot-blush"></div> Recurring & special events
+        <button onclick="showAddRecurring()" style="margin-left:auto;font-size:12px;padding:4px 12px;border-radius:20px;border:1px solid var(--sand);background:none;cursor:pointer;font-family:inherit;color:var(--bark)">+ Add event</button>
+      </div>
+
+      <!-- Quick-add picklist -->
+      <div id="recurringPicklist" style="margin-bottom:16px">
+        <p style="font-size:12px;color:var(--bark);margin-bottom:10px">Quick add from common events:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px" id="quickAddChips"></div>
+      </div>
+
+      <!-- Add/edit form (hidden by default) -->
+      <div id="recurringForm" style="display:none;background:var(--cream);border-radius:12px;padding:16px;margin-bottom:16px">
+        <p style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:12px" id="recurringFormTitle">Add event</p>
+        <input type="hidden" id="recurringEditIndex" value="-1" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="grid-column:1/-1">
+            <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--bark);display:block;margin-bottom:4px">Event name</label>
+            <input id="rec-title" type="text" placeholder="e.g. Ben football match" style="width:100%;padding:8px 12px;border:1px solid var(--sand);border-radius:8px;font-family:inherit;font-size:13px;background:white" />
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--bark);display:block;margin-bottom:4px">Date</label>
+            <input id="rec-date" type="date" style="width:100%;padding:8px 12px;border:1px solid var(--sand);border-radius:8px;font-family:inherit;font-size:13px;background:white" />
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--bark);display:block;margin-bottom:4px">Time</label>
+            <input id="rec-time" type="time" style="width:100%;padding:8px 12px;border:1px solid var(--sand);border-radius:8px;font-family:inherit;font-size:13px;background:white" />
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--bark);display:block;margin-bottom:4px">Who's taking them</label>
+            <select id="rec-who" style="width:100%;padding:8px 12px;border:1px solid var(--sand);border-radius:8px;font-family:inherit;font-size:13px;background:white">
+              <option value="">Select...</option>
+              <option>Mari</option>
+              <option>Brandon</option>
+              <option>Both</option>
+              <option>Arranging own transport</option>
+            </select>
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--bark);display:block;margin-bottom:4px">Location</label>
+            <input id="rec-location" type="text" placeholder="e.g. Byängsskolan, Rydbo 360" style="width:100%;padding:8px 12px;border:1px solid var(--sand);border-radius:8px;font-family:inherit;font-size:13px;background:white" />
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--bark);display:block;margin-bottom:4px">What to bring</label>
+            <input id="rec-bring" type="text" placeholder="e.g. Kit, shin pads, water bottle, snacks" style="width:100%;padding:8px 12px;border:1px solid var(--sand);border-radius:8px;font-family:inherit;font-size:13px;background:white" />
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;color:var(--bark);display:block;margin-bottom:4px">Notes</label>
+            <input id="rec-notes" type="text" placeholder="e.g. Opponent: AIK, bring orange slices" style="width:100%;padding:8px 12px;border:1px solid var(--sand);border-radius:8px;font-family:inherit;font-size:13px;background:white" />
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button onclick="saveRecurringEvent()" style="flex:1;background:var(--terracotta);color:white;border:none;padding:9px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">Save event</button>
+          <button onclick="document.getElementById('recurringForm').style.display='none'" style="padding:9px 16px;border:1px solid var(--sand);border-radius:8px;background:none;cursor:pointer;font-family:inherit;font-size:14px;color:var(--bark)">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Events list -->
+      <div id="recurringList">
+        <p class="empty-state">No recurring events yet — add from the quick list above or click "+ Add event".</p>
+      </div>
+    </div>
+
+    <!-- ONE-OFF BOOKINGS -->
     <div class="grid-2">
       <div class="panel">
-        <div class="panel-title"><div class="dot dot-blush"></div> Add to calendar</div>
+        <div class="panel-title"><div class="dot dot-mist"></div> Add one-off to calendar</div>
         <div class="booking-form">
           <input type="text" id="bookTitle" placeholder="What? (e.g. Date night, Hairdresser)" />
           <select id="bookWho">
             <option value="">Who?</option>
             <option>Both of us</option>
-            <option>You</option>
+            <option>Mari</option>
             <option>Brandon</option>
             <option>Kids</option>
             <option>Whole family</option>
@@ -772,7 +840,103 @@ function setHeroGreeting() {
 }
 setHeroGreeting();
 
-// ---- ICAL CALENDAR ----
+// ---- GOOGLE CALENDAR WRITE (OAuth) ----
+const GCAL_CLIENT_ID = '567515322428-6954hqafpljltbkfv7vden34uj35hief.apps.googleusercontent.com';
+const GCAL_SCOPES = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.readonly';
+let gcalToken = null;
+let gcalTokenExpiry = null;
+
+function connectGoogleCalendarWrite() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GCAL_CLIENT_ID,
+    scope: GCAL_SCOPES,
+    callback: (resp) => {
+      if (resp.error) { showToast('Google sign-in failed — try again'); return; }
+      gcalToken = resp.access_token;
+      gcalTokenExpiry = Date.now() + (resp.expires_in * 1000);
+      try { localStorage.setItem('gcal_token', gcalToken); localStorage.setItem('gcal_expiry', gcalTokenExpiry); } catch(e) {}
+      onGcalConnected();
+    }
+  });
+  client.requestAccessToken();
+}
+
+function onGcalConnected() {
+  document.getElementById('gcal-header-status').style.display = 'block';
+  document.getElementById('gcal-connect-btn').style.display = 'none';
+  showToast('✓ Google Calendar connected!');
+  renderBookings();
+  renderRecurringEvents();
+}
+
+function isGcalConnected() {
+  if (gcalToken && gcalTokenExpiry && Date.now() < gcalTokenExpiry) return true;
+  // Try to restore from localStorage
+  try {
+    const t = localStorage.getItem('gcal_token');
+    const e = localStorage.getItem('gcal_expiry');
+    if (t && e && Date.now() < parseInt(e)) {
+      gcalToken = t; gcalTokenExpiry = parseInt(e);
+      return true;
+    }
+  } catch(ex) {}
+  return false;
+}
+
+async function addEventToGoogleCalendar(eventData) {
+  if (!isGcalConnected()) {
+    showToast('Connect Google Calendar first — see header button');
+    return false;
+  }
+  try {
+    const event = {
+      summary: eventData.title,
+      location: eventData.location || '',
+      description: [
+        eventData.who ? `Who: ${eventData.who}` : '',
+        eventData.bring ? `Bring: ${eventData.bring}` : '',
+        eventData.notes || ''
+      ].filter(Boolean).join('\n'),
+      start: eventData.time
+        ? { dateTime: `${eventData.date}T${eventData.time}:00`, timeZone: 'Europe/Stockholm' }
+        : { date: eventData.date },
+      end: eventData.time
+        ? { dateTime: `${eventData.date}T${getEndTime(eventData.time)}:00`, timeZone: 'Europe/Stockholm' }
+        : { date: eventData.date },
+    };
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${gcalToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(event)
+    });
+    if (res.ok) {
+      showToast(`📅 "${eventData.title}" added to Google Calendar!`);
+      return true;
+    } else {
+      const err = await res.json();
+      if (err.error?.code === 401) {
+        gcalToken = null;
+        document.getElementById('gcal-connect-btn').style.display = 'block';
+        document.getElementById('gcal-header-status').style.display = 'none';
+        showToast('Session expired — please reconnect Google Calendar');
+      } else {
+        showToast('Could not add event — try again');
+      }
+      return false;
+    }
+  } catch(e) {
+    showToast('Error adding to calendar');
+    return false;
+  }
+}
+
+function getEndTime(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return `${String(h + 1).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
 const ICAL_URLS = [
   'https://calendar.google.com/calendar/ical/family04031633843425022505%40group.calendar.google.com/private-21deff3c2bdba38e267a30a480a17af5/basic.ics'
 ];
@@ -827,7 +991,15 @@ window.addEventListener('DOMContentLoaded', () => {
     status.textContent = '✓ Family calendar pre-loaded — click "Test calendar connection" to verify';
     status.style.color = '#4a7a4a';
   }
-  document.getElementById('gcal-header-status').style.display = 'block';
+  // Check if Google Calendar write is connected
+  if (isGcalConnected()) {
+    document.getElementById('gcal-header-status').style.display = 'block';
+    document.getElementById('gcal-connect-btn').style.display = 'none';
+  } else {
+    document.getElementById('gcal-header-status').style.display = 'none';
+    document.getElementById('gcal-connect-btn').style.display = 'block';
+  }
+  initQuickAddChips();
 });
 
 async function testIcalFeed() {
@@ -854,29 +1026,39 @@ async function testIcalFeed() {
 
 function parseIcal(icalText) {
   const events = [];
-  // unfold lines (continuation lines start with space or tab)
   const unfolded = icalText.replace(/\r\n([ \t])/g, '').replace(/\n([ \t])/g, '');
   const lines = unfolded.split(/\r\n|\n/);
   let current = null;
   for (const line of lines) {
     if (line === 'BEGIN:VEVENT') { current = {}; }
-    else if (line === 'END:VEVENT') { if (current) events.push(current); current = null; }
-    else if (current) {
-      // Handle DTSTART and DTSTART;TZID=... variants
-      if (line.startsWith('SUMMARY:')) current.title = line.slice(8).trim();
-      else if (line.startsWith('DTSTART')) {
-        const val = line.includes(':') ? line.split(':').slice(1).join(':') : '';
+    else if (line === 'END:VEVENT') {
+      if (current && current.title) events.push(current);
+      current = null;
+    } else if (current) {
+      if (line.startsWith('SUMMARY:')) {
+        current.title = line.slice(8).trim();
+      } else if (line.match(/^DTSTART/)) {
+        const val = line.includes(':') ? line.split(':').slice(1).join(':').trim() : '';
         current.start = val;
-        current.allDay = !val.includes('T');
-      }
-      else if (line.startsWith('DTEND')) {
-        const val = line.includes(':') ? line.split(':').slice(1).join(':') : '';
+        current.allDay = line.includes('VALUE=DATE') || (!val.includes('T'));
+        const tzMatch = line.match(/TZID=([^:;]+)/);
+        if (tzMatch) current.tzid = tzMatch[1];
+      } else if (line.match(/^DTEND/)) {
+        const val = line.includes(':') ? line.split(':').slice(1).join(':').trim() : '';
         current.end = val;
+      } else if (line.startsWith('RRULE:')) {
+        current.rrule = line.slice(6).trim();
+      } else if (line.startsWith('EXDATE')) {
+        if (!current.exdates) current.exdates = [];
+        const val = line.includes(':') ? line.split(':').slice(1).join(':').trim() : '';
+        current.exdates.push(val);
+      } else if (line.startsWith('DESCRIPTION:')) {
+        current.description = line.slice(12);
+      } else if (line.startsWith('LOCATION:')) {
+        current.location = line.slice(9);
+      } else if (line.startsWith('STATUS:')) {
+        current.status = line.slice(7).trim();
       }
-      else if (line.startsWith('DESCRIPTION:')) current.description = line.slice(12);
-      else if (line.startsWith('LOCATION:')) current.location = line.slice(9);
-      else if (line.startsWith('STATUS:')) current.status = line.slice(7).trim();
-      else if (line.match(/^DTSTART.*TZID/)) { const tzMatch = line.match(/TZID=([^:;]+)/); if (tzMatch) current.tzid = tzMatch[1]; }
     }
   }
   return events.filter(e => e.status !== 'CANCELLED');
@@ -884,17 +1066,82 @@ function parseIcal(icalText) {
 
 function icalDateToDate(str) {
   if (!str) return null;
-  // Strip any trailing chars after seconds
   const s = str.trim();
   if (s.includes('T')) {
     const y = s.slice(0,4), mo = s.slice(4,6), d = s.slice(6,8);
     const h = s.slice(9,11), mi = s.slice(11,13);
-    const isUtc = s.endsWith('Z');
-    return new Date(`${y}-${mo}-${d}T${h}:${mi}:00${isUtc?'Z':''}`);
+    if (s.endsWith('Z')) return new Date(`${y}-${mo}-${d}T${h}:${mi}:00Z`);
+    return new Date(`${y}-${mo}-${d}T${h}:${mi}:00`);
   } else {
-    const y = s.slice(0,4), mo = s.slice(4,6), d = s.slice(6,8);
+    const c = s.replace(/\D/g,'');
+    const y = c.slice(0,4), mo = c.slice(4,6), d = c.slice(6,8);
     return new Date(`${y}-${mo}-${d}T00:00:00`);
   }
+}
+
+// Expand recurring events within the week window
+function expandRecurring(ev, mon, sun) {
+  if (!ev.rrule) return [];
+  const results = [];
+  const startDate = icalDateToDate(ev.start);
+  if (!startDate) return [];
+
+  // Parse duration
+  const origEnd = ev.end ? icalDateToDate(ev.end) : null;
+  const duration = origEnd ? (origEnd - startDate) : (ev.allDay ? 86400000 : 3600000);
+
+  // Parse RRULE
+  const rule = {};
+  ev.rrule.split(';').forEach(part => {
+    const [k, v] = part.split('=');
+    rule[k] = v;
+  });
+
+  const freq = rule.FREQ;
+  const interval = parseInt(rule.INTERVAL || '1');
+  const until = rule.UNTIL ? icalDateToDate(rule.UNTIL) : null;
+  const count = rule.COUNT ? parseInt(rule.COUNT) : null;
+  const byDay = rule.BYDAY ? rule.BYDAY.split(',') : null;
+
+  // Day name to number
+  const dayMap = {SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6};
+
+  let current = new Date(startDate);
+  let iterations = 0;
+  const maxIter = 500;
+
+  while (current <= sun && iterations < maxIter) {
+    iterations++;
+    if (until && current > until) break;
+    if (count && iterations > count) break;
+
+    if (current >= mon && current <= sun) {
+      // Check not in exdates
+      const exStr = current.toISOString().replace(/[-:]/g,'').slice(0,15);
+      const isExcluded = ev.exdates && ev.exdates.some(ex => ex.replace(/[^0-9T]/g,'').slice(0,13) === exStr.slice(0,13));
+      if (!isExcluded) {
+        const endDate = new Date(current.getTime() + duration);
+        results.push({ ...ev, startDate: new Date(current), endDate });
+      }
+    }
+
+    // Advance by frequency
+    if (freq === 'DAILY') {
+      current = new Date(current); current.setDate(current.getDate() + interval);
+    } else if (freq === 'WEEKLY') {
+      if (byDay && byDay.length > 1) {
+        // Multiple days per week — advance one day at a time
+        current = new Date(current); current.setDate(current.getDate() + 1);
+      } else {
+        current = new Date(current); current.setDate(current.getDate() + 7 * interval);
+      }
+    } else if (freq === 'MONTHLY') {
+      current = new Date(current); current.setMonth(current.getMonth() + interval);
+    } else {
+      break; // unsupported frequency
+    }
+  }
+  return results;
 }
 
 async function fetchIcalEvents(urls) {
@@ -913,11 +1160,18 @@ async function fetchIcalEvents(urls) {
       const res = await fetch(proxyUrl);
       const text = await res.text();
       const parsed = parseIcal(text);
+
       parsed.forEach(ev => {
-        const start = icalDateToDate(ev.start);
-        const end = ev.end ? icalDateToDate(ev.end) : null;
-        if (start && start >= mon && start <= sun) {
-          allEvents.push({ ...ev, startDate: start, endDate: end });
+        if (ev.rrule) {
+          // Expand recurring events
+          const expanded = expandRecurring(ev, mon, sun);
+          allEvents.push(...expanded);
+        } else {
+          const start = icalDateToDate(ev.start);
+          const end = ev.end ? icalDateToDate(ev.end) : null;
+          if (start && start >= mon && start <= sun) {
+            allEvents.push({ ...ev, startDate: start, endDate: end });
+          }
         }
       });
     } catch(e) { console.warn('iCal fetch error:', e); }
@@ -925,7 +1179,6 @@ async function fetchIcalEvents(urls) {
 
   if (!allEvents.length) return null;
 
-  // Group by day, include end time
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const grouped = {};
   allEvents.sort((a,b) => a.startDate - b.startDate).forEach(ev => {
@@ -1418,7 +1671,11 @@ If no conflict, leave conflictNote empty and suggestion as "Looks good — no co
     const booking = { title, who, date, time, notes, conflict: result.conflict, note: result.suggestion || result.conflictNote };
     bookings.push(booking);
     renderBookings();
-    showToast(result.conflict ? `⚠️ Conflict detected — check bookings tab` : 'Added to bookings ✓');
+    showToast(result.conflict ? `⚠️ Conflict detected` : 'Added ✓');
+    // Auto-add to Google Calendar if connected
+    if (isGcalConnected()) {
+      await addEventToGoogleCalendar({ title, who, date, time, notes });
+    }
     document.getElementById('bookTitle').value = '';
     document.getElementById('bookNotes').value = '';
   } catch(e) {
@@ -1441,7 +1698,7 @@ function renderBookings() {
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
         <span class="status-badge ${b.conflict ? 'pending' : ''}">${b.conflict ? '⚠️ conflict' : '✓ clear'}</span>
-        <button onclick="downloadIcs(${i})" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sage);background:none;cursor:pointer;color:var(--bark);font-family:inherit">📅 Add to Calendar</button>
+        <button onclick="${isGcalConnected() ? `addEventToGoogleCalendar(bookings[${i}])` : `downloadIcs(${i})`}" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sage);background:none;cursor:pointer;color:var(--bark);font-family:inherit">📅 ${isGcalConnected() ? 'Add to Calendar' : 'Export .ics'}</button>
       </div>
     </div>
   `).join('');
@@ -1496,7 +1753,193 @@ function downloadIcs(i) {
   showToast('📅 Opening in Google Calendar...');
 }
 
-// ---- CHAT ----
+// ---- RECURRING EVENTS ----
+const RECURRING_KEY = 'ourweek_recurring';
+let recurringEvents = [];
+
+const QUICK_ADD_TEMPLATES = [
+  { title: 'Mari date night', who: 'Mari', bring: '', icon: '💃' },
+  { title: 'Brandon date night', who: 'Brandon', bring: '', icon: '🕺' },
+  { title: 'Brandon hockey match', who: 'Brandon', bring: 'Kit, stick, water bottle', icon: '🏒' },
+  { title: 'Ben football match', who: 'Brandon', bring: 'Kit, shin pads, water bottle, snacks', icon: '⚽' },
+  { title: 'Ben bandy match', who: 'Brandon', bring: 'Bandy kit, skates, helmet, water bottle', icon: '🏑' },
+  { title: 'Sam at party', who: 'Mari', bring: 'Present, party clothes', icon: '🎉' },
+  { title: 'Ben at party', who: 'Mari', bring: 'Present, party clothes', icon: '🎂' },
+  { title: 'Sam friidrott', who: 'Mari', bring: 'Sports kit, water bottle', icon: '🏃' },
+  { title: 'Hairdresser', who: 'Mari', bring: '', icon: '✂️' },
+  { title: 'School activity', who: 'Both', bring: '', icon: '🏫' },
+];
+
+function loadRecurringEvents() {
+  try {
+    const raw = localStorage.getItem(RECURRING_KEY);
+    if (raw) { recurringEvents = JSON.parse(raw); renderRecurringEvents(); }
+  } catch(e) {}
+}
+
+function saveRecurringEvents() {
+  try { localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringEvents)); } catch(e) {}
+}
+
+function initQuickAddChips() {
+  const el = document.getElementById('quickAddChips');
+  if (!el) return;
+  el.innerHTML = QUICK_ADD_TEMPLATES.map((t,i) => `
+    <button onclick="quickAddRecurring(${i})" style="display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;border:1px solid var(--sand);background:var(--cream);cursor:pointer;font-family:inherit;font-size:13px;color:var(--bark);transition:all 0.15s"
+      onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background='var(--cream)'">
+      ${t.icon} ${t.title}
+    </button>
+  `).join('');
+}
+
+function quickAddRecurring(i) {
+  const t = QUICK_ADD_TEMPLATES[i];
+  document.getElementById('rec-title').value = t.title;
+  document.getElementById('rec-who').value = t.who;
+  document.getElementById('rec-bring').value = t.bring;
+  document.getElementById('rec-notes').value = '';
+  document.getElementById('rec-location').value = '';
+  document.getElementById('rec-date').value = '';
+  document.getElementById('rec-time').value = '';
+  document.getElementById('recurringEditIndex').value = '-1';
+  document.getElementById('recurringFormTitle').textContent = `Add: ${t.title}`;
+  document.getElementById('recurringForm').style.display = 'block';
+  document.getElementById('rec-date').focus();
+}
+
+function showAddRecurring() {
+  document.getElementById('rec-title').value = '';
+  document.getElementById('rec-who').value = '';
+  document.getElementById('rec-bring').value = '';
+  document.getElementById('rec-notes').value = '';
+  document.getElementById('rec-location').value = '';
+  document.getElementById('rec-date').value = '';
+  document.getElementById('rec-time').value = '';
+  document.getElementById('recurringEditIndex').value = '-1';
+  document.getElementById('recurringFormTitle').textContent = 'Add event';
+  document.getElementById('recurringForm').style.display = 'block';
+  document.getElementById('rec-title').focus();
+}
+
+function editRecurringEvent(i) {
+  const ev = recurringEvents[i];
+  if (!ev) return;
+  document.getElementById('rec-title').value = ev.title;
+  document.getElementById('rec-who').value = ev.who || '';
+  document.getElementById('rec-bring').value = ev.bring || '';
+  document.getElementById('rec-notes').value = ev.notes || '';
+  document.getElementById('rec-location').value = ev.location || '';
+  document.getElementById('rec-date').value = ev.date || '';
+  document.getElementById('rec-time').value = ev.time || '';
+  document.getElementById('recurringEditIndex').value = i;
+  document.getElementById('recurringFormTitle').textContent = `Edit: ${ev.title}`;
+  document.getElementById('recurringForm').style.display = 'block';
+}
+
+function saveRecurringEvent() {
+  const title = document.getElementById('rec-title').value.trim();
+  if (!title) { showToast('Please enter an event name'); return; }
+  const ev = {
+    title,
+    date: document.getElementById('rec-date').value,
+    time: document.getElementById('rec-time').value,
+    who: document.getElementById('rec-who').value,
+    location: document.getElementById('rec-location').value,
+    bring: document.getElementById('rec-bring').value,
+    notes: document.getElementById('rec-notes').value,
+  };
+  const editIndex = parseInt(document.getElementById('recurringEditIndex').value);
+  if (editIndex >= 0) {
+    recurringEvents[editIndex] = ev;
+  } else {
+    recurringEvents.push(ev);
+  }
+  saveRecurringEvents();
+  renderRecurringEvents();
+  document.getElementById('recurringForm').style.display = 'none';
+  showToast(`${title} saved ✓`);
+}
+
+function deleteRecurringEvent(i) {
+  if (!confirm(`Remove "${recurringEvents[i].title}"?`)) return;
+  recurringEvents.splice(i, 1);
+  saveRecurringEvents();
+  renderRecurringEvents();
+}
+
+function downloadRecurringIcs(i) {
+  const b = recurringEvents[i];
+  if (!b || !b.date) { showToast('Add a date first to export to calendar'); return; }
+  const dateStr = b.date.replace(/-/g,'');
+  let dtStart, dtEnd;
+  if (b.time) {
+    const timeStr = b.time.replace(':','') + '00';
+    dtStart = `${dateStr}T${timeStr}`;
+    const [h, m] = b.time.split(':').map(Number);
+    const endH = String(h + 1).padStart(2,'0');
+    dtEnd = `${dateStr}T${endH}${String(m).padStart(2,'0')}00`;
+  } else {
+    dtStart = dateStr; dtEnd = dateStr;
+  }
+  const desc = [b.who ? `Who's taking: ${b.who}` : '', b.bring ? `Bring: ${b.bring}` : '', b.notes || ''].filter(Boolean).join('\\n');
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Our Week//Family Planner//EN',
+    'BEGIN:VEVENT',
+    `UID:${Date.now()}@ourweek.app`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g,'').split('.')[0]}Z`,
+    b.time ? `DTSTART:${dtStart}` : `DTSTART;VALUE=DATE:${dtStart}`,
+    b.time ? `DTEND:${dtEnd}` : `DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${b.title}`,
+    b.location ? `LOCATION:${b.location}` : '',
+    desc ? `DESCRIPTION:${desc}` : '',
+    'END:VEVENT', 'END:VCALENDAR'
+  ].filter(Boolean).join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${b.title.replace(/\s+/g,'-')}.ics`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('📅 Opening in Google Calendar...');
+}
+
+function renderRecurringEvents() {
+  const el = document.getElementById('recurringList');
+  if (!el) return;
+  if (!recurringEvents.length) {
+    el.innerHTML = '<p class="empty-state">No events yet — add from the quick list above or click "+ Add event".</p>';
+    return;
+  }
+  // Sort by date
+  const sorted = [...recurringEvents].map((e,i) => ({...e, origIndex: i}))
+    .sort((a,b) => (a.date||'9999') > (b.date||'9999') ? 1 : -1);
+
+  el.innerHTML = sorted.map(ev => {
+    const i = ev.origIndex;
+    const icon = QUICK_ADD_TEMPLATES.find(t => t.title === ev.title)?.icon || '📅';
+    return `
+    <div style="padding:12px 0;border-bottom:1px solid var(--sand);display:flex;align-items:flex-start;gap:12px">
+      <div style="font-size:20px;flex-shrink:0;margin-top:2px">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:500;color:var(--ink);margin-bottom:4px">${ev.title}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+          ${ev.date ? `<span style="font-size:12px;background:var(--sand);padding:2px 8px;border-radius:10px;color:var(--bark)">${ev.date}${ev.time ? ' '+ev.time : ''}</span>` : '<span style="font-size:12px;color:var(--stone);font-style:italic">No date set</span>'}
+          ${ev.who ? `<span style="font-size:12px;background:#DCE8DC;padding:2px 8px;border-radius:10px;color:#3A5C3A">🚗 ${ev.who}</span>` : ''}
+        </div>
+        ${ev.location ? `<div style="font-size:12px;color:var(--bark);margin-bottom:3px">📍 ${ev.location}</div>` : ''}
+        ${ev.bring ? `<div style="font-size:12px;color:var(--bark);margin-bottom:3px">🎒 ${ev.bring}</div>` : ''}
+        ${ev.notes ? `<div style="font-size:12px;color:var(--bark);font-style:italic">${ev.notes}</div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">
+        <button onclick="editRecurringEvent(${i})" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sand);background:none;cursor:pointer;color:var(--bark);font-family:inherit">Edit</button>
+        <button onclick="${isGcalConnected() ? `addEventToGoogleCalendar(recurringEvents[${i}])` : `downloadRecurringIcs(${i})`}" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sage);background:none;cursor:pointer;color:var(--bark);font-family:inherit">📅 ${isGcalConnected() ? 'Add to Cal' : 'Export .ics'}</button>
+        <button onclick="deleteRecurringEvent(${i})" style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--sand);background:none;cursor:pointer;color:var(--stone);font-family:inherit">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Init recurring events on load
+loadRecurringEvents();
 function addChatMessage(role, text) {
   const el = document.getElementById('chatMessages');
   const div = document.createElement('div');
